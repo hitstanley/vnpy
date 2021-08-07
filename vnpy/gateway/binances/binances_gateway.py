@@ -995,16 +995,20 @@ class BinancesDataWebsocketApi(WebsocketClient):
             tick.datetime = datetime.fromtimestamp(float(data['E']) / 1000)
         else:
             bids = data["b"]
+            tick.bid_prices = []
+            tick.bid_volumes = []
             for n in range(min(20, len(bids))):
                 price, volume = bids[n]
-                tick.__setattr__("bid_price_" + str(n + 1), float(price))
-                tick.__setattr__("bid_volume_" + str(n + 1), float(volume))
+                tick.bid_prices.append(float(price))
+                tick.bid_volumes.append(float(volume))
 
             asks = data["a"]
+            tick.ask_prices = []
+            tick.ask_volumes = []
             for n in range(min(20, len(asks))):
                 price, volume = asks[n]
-                tick.__setattr__("ask_price_" + str(n + 1), float(price))
-                tick.__setattr__("ask_volume_" + str(n + 1), float(volume))
+                tick.ask_prices.append(float(price))
+                tick.ask_volumes.append(float(volume))
 
         if tick.last_price:
             self.gateway.on_tick(copy(tick))
