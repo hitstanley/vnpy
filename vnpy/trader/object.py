@@ -54,6 +54,7 @@ class TickData(BaseData):
     ask_prices = []
     bid_volumes = []
     ask_volumes = []
+    depth_datetime: datetime = None
 
     localtime: datetime = None
 
