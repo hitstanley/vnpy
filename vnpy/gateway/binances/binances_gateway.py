@@ -992,8 +992,10 @@ class BinancesDataWebsocketApi(WebsocketClient):
             tick.high_price = float(data['h'])
             tick.low_price = float(data['l'])
             tick.last_price = float(data['c'])
+            tick.last_volume = float(data['Q'])
             tick.datetime = datetime.fromtimestamp(float(data['E']) / 1000)
         else:
+            tick.depth_datetime = datetime.fromtimestamp(float(data['E']) / 1000)
             bids = data["b"]
             tick.bid_prices = []
             tick.bid_volumes = []
