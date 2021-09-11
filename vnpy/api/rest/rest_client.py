@@ -34,6 +34,7 @@ class Request(object):
         method: str,
         path: str,
         params: dict,
+        json: dict,
         data: Union[dict, str, bytes],
         headers: dict,
         callback: CALLBACK_TYPE = None,
@@ -46,6 +47,7 @@ class Request(object):
         self.path: str = path
         self.callback: CALLBACK_TYPE = callback
         self.params: dict = params
+        self.json: dict = json
         self.data: Union[dict, str, bytes] = data
         self.headers: dict = headers
 
@@ -67,6 +69,7 @@ class Request(object):
             "request : {} {} {} because {}: \n"
             "headers: {}\n"
             "params: {}\n"
+            "json: {}\n"
             "data: {}\n"
             "response:"
             "{}\n".format(
@@ -76,6 +79,7 @@ class Request(object):
                 status_code,
                 self.headers,
                 self.params,
+                self.json,
                 self.data,
                 "" if self.response is None else self.response.text,
             )
@@ -146,6 +150,7 @@ class RestClient(object):
         path: str,
         callback: CALLBACK_TYPE,
         params: dict = None,
+        json: dict = None,
         data: Union[dict, str, bytes] = None,
         headers: dict = None,
         on_failed: ON_FAILED_TYPE = None,
@@ -169,6 +174,7 @@ class RestClient(object):
             method,
             path,
             params,
+            json,
             data,
             headers,
             callback,
@@ -258,6 +264,7 @@ class RestClient(object):
                 url,
                 headers=request.headers,
                 params=request.params,
+                json=request.json,
                 data=request.data,
                 proxies=self.proxies,
             )

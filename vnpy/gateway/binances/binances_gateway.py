@@ -39,7 +39,10 @@ from vnpy.trader.object import (
     OrderRequest,
     CancelRequest,
     SubscribeRequest,
-    HistoryRequest
+    HistoryRequest,
+    LeverageRequest,
+    PositionSideRequest,
+    MarginTypeRequest
 )
 from vnpy.trader.event import EVENT_TIMER
 from vnpy.event import Event, EventEngine
@@ -78,10 +81,24 @@ ORDERTYPE_VT2BINANCES: Dict[OrderType, Tuple[str, str]] = {
 ORDERTYPE_BINANCES2VT: Dict[Tuple[str, str], OrderType] = {v: k for k, v in ORDERTYPE_VT2BINANCES.items()}
 
 DIRECTION_VT2BINANCES: Dict[Direction, str] = {
-    Direction.LONG: "BUY",
-    Direction.SHORT: "SELL"
+    Direction.LONG: "LONG",
+    Direction.SHORT: "SHORT"
 }
 DIRECTION_BINANCES2VT: Dict[str, Direction] = {v: k for k, v in DIRECTION_VT2BINANCES.items()}
+
+SIDE_VT2BINANCES: Dict[Tuple[Direction, Offset], str] = {
+    (Direction.LONG, Offset.OPEN): "BUY",
+    (Direction.LONG, Offset.CLOSE): "SELL",
+    (Direction.SHORT, Offset.OPEN): "SELL",
+    (Direction.SHORT, Offset.CLOSE): "BUY"
+}
+
+OFFSET_BINANCES2VT: Dict[Tuple[Direction, str], Offset] = {
+    (Direction.LONG, "BUY"): Offset.OPEN,
+    (Direction.LONG, "SELL"): Offset.CLOSE,
+    (Direction.SHORT, "BUY"): Offset.CLOSE,
+    (Direction.SHORT, "SELL"): Offset.OPEN
+}
 
 INTERVAL_VT2BINANCES: Dict[Interval, str] = {
     Interval.MINUTE: "1m",
@@ -102,6 +119,14 @@ class Security(Enum):
     NONE: int = 0
     SIGNED: int = 1
     API_KEY: int = 2
+
+
+class MarginType(Enum):
+    """
+    逐仓、全仓
+    """
+    ISOLATED: str = "ISOLATED"
+    CROSSED: str = "CROSSED"
 
 
 symbol_contract_map: Dict[str, ContractData] = {}
@@ -165,6 +190,18 @@ class BinancesGateway(BaseGateway):
     def cancel_order(self, req: CancelRequest) -> Request:
         """"""
         self.rest_api.cancel_order(req)
+
+    def set_leverage(self, req: LeverageRequest) -> Request:
+        """"""
+        self.rest_api.set_leverage(req)
+
+    def set_position_side(self, req: PositionSideRequest) -> Request:
+        """"""
+        self.rest_api.set_position_side(req)
+
+    def set_margin_type(self, req: MarginTypeRequest) -> Request:
+        """"""
+        self.rest_api.set_margin_type(req)
 
     def query_account(self) -> None:
         """"""
@@ -427,7 +464,8 @@ class BinancesRestApi(RestClient):
 
         params = {
             "symbol": req.symbol,
-            "side": DIRECTION_VT2BINANCES[req.direction],
+            "side": SIDE_VT2BINANCES.get((req.direction, req.offset), None),
+            "positionSide": DIRECTION_VT2BINANCES[req.direction],
             "type": order_type,
             "timeInForce": time_condition,
             "price": float(req.price),
@@ -435,8 +473,8 @@ class BinancesRestApi(RestClient):
             "newClientOrderId": orderid,
         }
 
-        if req.offset == Offset.CLOSE:
-            params["reduceOnly"] = True
+        # if req.offset == Offset.CLOSE:
+        #     params["reduceOnly"] = True
 
         if self.usdt_base:
             path = "/fapi/v1/order"
@@ -482,6 +520,74 @@ class BinancesRestApi(RestClient):
             data=data,
             on_failed=self.on_cancel_failed,
             extra=order
+        )
+
+    def set_leverage(self, req: LeverageRequest) -> Request:
+        data = {
+            "security": Security.SIGNED
+        }
+
+        params = {
+            "symbol": req.symbol,
+            "leverage": req.leverage
+        }
+
+        if self.usdt_base:
+            path = "/fapi/v1/leverage"
+        else:
+            path = "/dapi/v1/leverage"
+
+        self.add_request(
+            method="POST",
+            path=path,
+            callback=self.on_set_leverage,
+            params=params,
+            data=data
+        )
+
+    def set_position_side(self, req: PositionSideRequest) -> Request:
+        data = {
+            "security": Security.SIGNED
+        }
+
+        params = {
+            "dualSidePosition": "true" if req.dual_side_position else "false"
+        }
+
+        if self.usdt_base:
+            path = "/fapi/v1/positionSide/dual"
+        else:
+            path = "/dapi/v1/positionSide/dual"
+
+        self.add_request(
+            method="POST",
+            path=path,
+            callback=self.on_set_position_side,
+            params=params,
+            data=data
+        )
+
+    def set_margin_type(self, req: MarginTypeRequest) -> Request:
+        data = {
+            "security": Security.SIGNED
+        }
+
+        params = {
+            "symbol": req.symbol,
+            "marginType": req.margin_type
+        }
+
+        if self.usdt_base:
+            path = "/fapi/v1/marginType"
+        else:
+            path = "/dapi/v1/marginType"
+
+        self.add_request(
+            method="POST",
+            path=path,
+            callback=self.on_set_margin_type,
+            params=params,
+            data=data
         )
 
     def start_user_stream(self) -> Request:
@@ -537,6 +643,20 @@ class BinancesRestApi(RestClient):
         server_time = int(data["serverTime"])
         self.time_offset = local_time - server_time
 
+    def on_set_leverage(self, data: dict, request: Request) -> None:
+        """"""
+        self.gateway.write_log(f"设置杠杆比例：gateway={self.gateway_name} symbol={data['symbol']} leverage={data['leverage']}")
+
+    def on_set_position_side(self, data: dict, request: Request) -> None:
+        """"""
+        if data['code'] == 200:
+            self.gateway.write_log(f"设置持仓模式成功：gateway={self.gateway_name}")
+
+    def on_set_margin_type(self, data: dict, request: Request) -> None:
+        """"""
+        if data['code'] == 200:
+            self.gateway.write_log(f"设置逐全仓模式成功：gateway={self.gateway_name} symbol={data['symbol']}")
+
     def on_query_account(self, data: dict, request: Request) -> None:
         """"""
         for asset in data["assets"]:
@@ -591,7 +711,8 @@ class BinancesRestApi(RestClient):
                 price=float(d["price"]),
                 volume=float(d["origQty"]),
                 type=order_type,
-                direction=DIRECTION_BINANCES2VT[d["side"]],
+                direction=DIRECTION_BINANCES2VT[d["positionSide"]],
+                offset=OFFSET_BINANCES2VT[(DIRECTION_BINANCES2VT[d["positionSide"]], d["side"])],
                 traded=float(d["executedQty"]),
                 status=STATUS_BINANCES2VT.get(d["status"], None),
                 datetime=generate_datetime(d["time"]),
@@ -873,7 +994,8 @@ class BinancesTradeWebsocketApi(WebsocketClient):
             exchange=Exchange.BINANCE,
             orderid=str(ord_data["c"]),
             type=order_type,
-            direction=DIRECTION_BINANCES2VT[ord_data["S"]],
+            direction=DIRECTION_BINANCES2VT[ord_data["ps"]],
+            offset=OFFSET_BINANCES2VT[(DIRECTION_BINANCES2VT[ord_data["ps"]], ord_data["S"])],
             price=float(ord_data["p"]),
             volume=float(ord_data["q"]),
             traded=float(ord_data["z"]),

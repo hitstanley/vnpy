@@ -1,7 +1,8 @@
 """
 """
-
+import json
 import logging
+import time
 from logging import Logger
 import smtplib
 import os
@@ -37,10 +38,14 @@ from .object import (
     PositionData,
     AccountData,
     ContractData,
-    Exchange
+    Exchange,
+    LeverageRequest,
+    PositionSideRequest,
+    MarginTypeRequest
 )
 from .setting import SETTINGS
 from .utility import get_folder_path, TRADER_DIR
+from vnpy.api.rest import RestClient, Request
 
 
 class MainEngine:
@@ -103,6 +108,7 @@ class MainEngine:
         self.add_engine(LogEngine)
         self.add_engine(OmsEngine)
         self.add_engine(EmailEngine)
+        self.add_engine(MessagePushEngine)
 
     def write_log(self, msg: str, source: str = "") -> None:
         """
@@ -172,6 +178,30 @@ class MainEngine:
         gateway = self.get_gateway(gateway_name)
         if gateway:
             gateway.subscribe(req)
+
+    def set_leverage(self, req: LeverageRequest, gateway_name: str) -> None:
+        """
+        set leverage
+        """
+        gateway = self.get_gateway(gateway_name)
+        if gateway and gateway.set_leverage:
+            gateway.set_leverage(req)
+
+    def set_position_side(self, req: PositionSideRequest, gateway_name: str) -> None:
+        """
+        set position side
+        """
+        gateway = self.get_gateway(gateway_name)
+        if gateway and gateway.set_position_side:
+            gateway.set_position_side(req)
+
+    def set_margin_type(self, req: MarginTypeRequest, gateway_name: str) -> None:
+        """
+        set margin type
+        """
+        gateway = self.get_gateway(gateway_name)
+        if gateway and gateway.set_margin_type:
+            gateway.set_margin_type(req)
 
     def send_order(self, req: OrderRequest, gateway_name: str) -> str:
         """
@@ -561,3 +591,53 @@ class EmailEngine(BaseEngine):
 
         self.active = False
         self.thread.join()
+
+
+class MessagePushEngine(BaseEngine):
+    """
+    Provides push message function for VN Trader.
+    """
+
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine):
+        """"""
+        super(MessagePushEngine, self).__init__(main_engine, event_engine, "push")
+
+        self.active = False
+        self.main_engine.push_message = self.push_message
+        self.rest_api = RestClient()
+
+    def on_push(self, data: dict, req: Request):
+        pass
+
+    def push_message(self, symbol: str, content: str) -> None:
+        if not self.active:
+            self.start()
+
+        data = {
+            "msg_type": "text",
+            "content": {
+                "text": f"[{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}]|{SETTINGS['feishu.keyword']}|{symbol}|\n"
+                        f"{content}"
+            }
+        }
+        self.rest_api.add_request(
+            method="POST",
+            path="",
+            json=data,
+            callback=self.on_push
+        )
+
+    def start(self) -> None:
+        """"""
+        self.active = True
+        self.rest_api.init(SETTINGS["feishu.webhook"])
+        self.rest_api.start(1)
+        self.main_engine.write_log("消息推送引擎启动")
+
+    def close(self) -> None:
+        """"""
+        if not self.active:
+            return
+
+        self.active = False
+        self.rest_api.stop()
