@@ -349,6 +349,46 @@ class CancelRequest:
 
 
 @dataclass
+class LeverageRequest:
+    """
+    Request sending to specific gateway for setting leverage.
+    """
+
+    symbol: str
+    leverage: int
+    exchange: Exchange
+
+    def __post_init__(self):
+        """"""
+        self.vt_symbol = f"{self.symbol}.{self.exchange.value}"
+
+
+@dataclass
+class PositionSideRequest:
+    """
+    Request sending to specific gateway for setting dual side position
+    """
+
+    dual_side_position: bool
+    exchange: Exchange
+
+
+@dataclass
+class MarginTypeRequest:
+    """
+    Request sending to specific gateway for setting margin type
+    """
+
+    symbol: str
+    margin_type: str
+    exchange: Exchange
+
+    def __post_init__(self):
+        """"""
+        self.vt_symbol = f"{self.symbol}.{self.exchange.value}"
+
+
+@dataclass
 class HistoryRequest:
     """
     Request sending to specific gateway for querying history data.
