@@ -1,7 +1,7 @@
 """
 Basic data structure used for general trading function in the trading platform.
 """
-
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from logging import INFO
@@ -61,6 +61,21 @@ class TickData(BaseData):
     def __post_init__(self) -> None:
         """"""
         self.vt_symbol: str = f"{self.symbol}.{self.exchange.value}"
+
+    def __getattr__(self, item):
+        match = re.match(r'bid_price_(\d+)', item)
+        if match:
+            return self.bid_prices[int(match.group(1)) - 1]
+        match = re.match(r'ask_price_(\d+)', item)
+        if match:
+            return self.ask_prices[int(match.group(1)) - 1]
+        match = re.match(r'bid_volume_(\d+)', item)
+        if match:
+            return self.bid_volumes[int(match.group(1)) - 1]
+        match = re.match(r'ask_volume_(\d+)', item)
+        if match:
+            return self.ask_volumes[int(match.group(1)) - 1]
+        return None
 
 
 @dataclass
