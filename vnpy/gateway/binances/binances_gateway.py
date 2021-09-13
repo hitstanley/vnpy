@@ -1023,6 +1023,7 @@ class BinancesTradeWebsocketApi(WebsocketClient):
             orderid=order.orderid,
             tradeid=ord_data["t"],
             direction=order.direction,
+            offset=order.offset,
             price=float(ord_data["L"]),
             volume=trade_volume,
             datetime=generate_datetime(ord_data["T"]),
