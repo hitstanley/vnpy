@@ -75,7 +75,7 @@ class TickData(BaseData):
         match = re.match(r'ask_volume_(\d+)', item)
         if match:
             return self.ask_volumes[int(match.group(1)) - 1]
-        return None
+        return super().__getattribute__(item)
 
 
 @dataclass
