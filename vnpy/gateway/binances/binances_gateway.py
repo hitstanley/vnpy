@@ -976,7 +976,7 @@ class BinancesTradeWebsocketApi(WebsocketClient):
                     direction=Direction.NET,
                     volume=volume,
                     price=float(pos_data["ep"]),
-                    pnl=float(pos_data["cr"]),
+                    pnl=float(pos_data["up"]),
                     gateway_name=self.gateway_name,
                 )
                 self.gateway.on_position(position)
