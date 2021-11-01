@@ -670,7 +670,7 @@ class MessagePushEngine(BaseEngine):
         data = {
             "msg_type": "text",
             "content": {
-                "text": f"[{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}]|{SETTINGS['feishu.keyword']}|{symbol}|\n"
+                "text": f"[{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}]|{SETTINGS['account.name']}|{SETTINGS['feishu.keyword']}|{symbol}|\n"
                         f"{content}"
             }
         }
