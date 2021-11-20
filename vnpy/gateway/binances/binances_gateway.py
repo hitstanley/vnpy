@@ -82,7 +82,8 @@ ORDERTYPE_BINANCES2VT: Dict[Tuple[str, str], OrderType] = {v: k for k, v in ORDE
 
 DIRECTION_VT2BINANCES: Dict[Direction, str] = {
     Direction.LONG: "LONG",
-    Direction.SHORT: "SHORT"
+    Direction.SHORT: "SHORT",
+    Direction.NET: "BOTH"
 }
 DIRECTION_BINANCES2VT: Dict[str, Direction] = {v: k for k, v in DIRECTION_VT2BINANCES.items()}
 
@@ -678,7 +679,7 @@ class BinancesRestApi(RestClient):
             position = PositionData(
                 symbol=d["symbol"],
                 exchange=Exchange.BINANCE,
-                direction=Direction.NET,
+                direction=DIRECTION_BINANCES2VT[d["positionSide"]],
                 volume=float(d["positionAmt"]),
                 price=float(d["entryPrice"]),
                 pnl=float(d["unRealizedProfit"]),
@@ -746,7 +747,7 @@ class BinancesRestApi(RestClient):
                 size=1,
                 min_volume=min_volume,
                 product=Product.FUTURES,
-                net_position=True,
+                net_position=False,
                 history_data=True,
                 gateway_name=self.gateway_name,
             )
@@ -963,23 +964,22 @@ class BinancesTradeWebsocketApi(WebsocketClient):
                 self.gateway.on_account(account)
 
         for pos_data in packet["a"]["P"]:
-            if pos_data["ps"] == "BOTH":
-                volume = pos_data["pa"]
-                if '.' in volume:
-                    volume = float(volume)
-                else:
-                    volume = int(volume)
+            volume = pos_data["pa"]
+            if '.' in volume:
+                volume = float(volume)
+            else:
+                volume = int(volume)
 
-                position = PositionData(
-                    symbol=pos_data["s"],
-                    exchange=Exchange.BINANCE,
-                    direction=Direction.NET,
-                    volume=volume,
-                    price=float(pos_data["ep"]),
-                    pnl=float(pos_data["up"]),
-                    gateway_name=self.gateway_name,
-                )
-                self.gateway.on_position(position)
+            position = PositionData(
+                symbol=pos_data["s"],
+                exchange=Exchange.BINANCE,
+                direction=DIRECTION_BINANCES2VT[pos_data["ps"]],
+                volume=volume,
+                price=float(pos_data["ep"]),
+                pnl=float(pos_data["up"]),
+                gateway_name=self.gateway_name,
+            )
+            self.gateway.on_position(position)
 
     def on_order(self, packet: dict) -> None:
         """"""
