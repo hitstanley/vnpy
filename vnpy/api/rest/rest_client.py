@@ -306,6 +306,7 @@ class RestClient(object):
         method: str,
         path: str,
         params: dict = None,
+        json: dict = None,
         data: dict = None,
         headers: dict = None,
     ) -> requests.Response:
@@ -314,6 +315,7 @@ class RestClient(object):
         :param method: GET, POST, PUT, DELETE, QUERY
         :param path: url path for query
         :param params: dict for query string
+        :param json：dict for json
         :param data: dict for body
         :param headers: dict for headers
         :return: requests.Response
@@ -322,6 +324,7 @@ class RestClient(object):
             method,
             path,
             params,
+            json,
             data,
             headers
         )
