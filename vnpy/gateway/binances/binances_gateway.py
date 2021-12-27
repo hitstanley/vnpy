@@ -710,6 +710,7 @@ class BinancesRestApi(RestClient):
                 symbol=d["symbol"],
                 exchange=Exchange.BINANCE,
                 price=float(d["price"]),
+                avg_price=float(d["avgPrice"]),
                 volume=float(d["origQty"]),
                 type=order_type,
                 direction=DIRECTION_BINANCES2VT[d["positionSide"]],
@@ -997,8 +998,10 @@ class BinancesTradeWebsocketApi(WebsocketClient):
             direction=DIRECTION_BINANCES2VT[ord_data["ps"]],
             offset=OFFSET_BINANCES2VT[(DIRECTION_BINANCES2VT[ord_data["ps"]], ord_data["S"])],
             price=float(ord_data["p"]),
+            avg_price=float(ord_data["ap"]),
             volume=float(ord_data["q"]),
             traded=float(ord_data["z"]),
+            profit=float(ord_data["rp"]),
             status=STATUS_BINANCES2VT[ord_data["X"]],
             datetime=generate_datetime(packet["E"]),
             gateway_name=self.gateway_name
