@@ -609,15 +609,14 @@ class MessagePushEngine(BaseEngine):
     def on_push(self, data: dict, req: Request):
         pass
 
-    def push_message(self, symbol: str, content: str) -> None:
+    def push_message(self, content: str) -> None:
         if not self.active:
             self.start()
 
         data = {
             "msg_type": "text",
             "content": {
-                "text": f"[{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}]|{SETTINGS['account.name']}|{SETTINGS['feishu.keyword']}|{symbol}|\n"
-                        f"{content}"
+                "text": content
             }
         }
         self.rest_api.add_request(
