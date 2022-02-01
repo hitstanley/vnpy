@@ -47,7 +47,7 @@ from .object import (
 )
 from .setting import SETTINGS
 from .utility import get_folder_path, TRADER_DIR
-from vnpy.api.rest import RestClient, Request
+from vnpy_rest import RestClient, Request
 
 
 class MainEngine:
@@ -659,15 +659,16 @@ class MessagePushEngine(BaseEngine):
         self.active = False
         self.main_engine.push_message = self.push_message
         self.rest_api = RestClient()
+        self.start()
 
     def on_push(self, data: dict, req: Request):
         pass
 
     def push_message(self, content: str) -> None:
         if not self.active:
-            self.start()
+            return
 
-        data = {
+        data: dict = {
             "msg_type": "text",
             "content": {
                 "text": content
@@ -676,7 +677,10 @@ class MessagePushEngine(BaseEngine):
         self.rest_api.add_request(
             method="POST",
             path="",
-            json=data,
+            data=json.dumps(data),
+            headers={
+                "Content-Type": "application/json"
+            },
             callback=self.on_push
         )
 
@@ -684,7 +688,7 @@ class MessagePushEngine(BaseEngine):
         """"""
         self.active = True
         self.rest_api.init(SETTINGS["feishu.webhook"])
-        self.rest_api.start(1)
+        self.rest_api.start()
         self.main_engine.write_log("消息推送引擎启动")
 
     def close(self) -> None:
