@@ -126,6 +126,7 @@ class Exchange(Enum):
     KRX = "KRX"             # Korean Exchange
     OTC = "OTC"             # OTC Product (Forex/CFD/Pink Sheet Equity)
     IBKRATS = "IBKRATS"     # Paper Trading Exchange of IB
+    BINANCE = "BINANCE"
 
     # Special Function
     LOCAL = "LOCAL"         # For local generated data
@@ -147,6 +148,7 @@ class Interval(Enum):
     """
     MINUTE = "1m"
     FIVE_MINUTE = "5m"
+    FIFTEEN_MINUTE = "15m"
     HOUR = "1h"
     DAILY = "d"
     WEEKLY = "w"
